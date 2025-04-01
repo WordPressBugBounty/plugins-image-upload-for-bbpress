@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Image Upload for BBPress
+ * Plugin Name: Inline Image Upload for BBPress
  * Description: Upload inline images to BBPress forum topics and replies.
- * Version: 1.1.19
+ * Version: 1.1.20
  * Author: WP Zone
  * Author URI: https://wpzone.co/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-plugin-author-uri
  * License: GNU General Public License version 3 or later
@@ -88,14 +88,14 @@ function hm_bbpui_admin_page() {
 	echo('
 			<h3 style="margin-top: 40px;">Usage Instructions</h3>
 			<p>To upload an image to a forum topic or reply, click the <em>Insert/edit image</em> button in the editor toolbar:</p>
-			<img src="'.plugins_url('images/bbpui-screenshot-toolbar.png', __FILE__).'" alt="Toolbar screenshot" />
+			<img src="'.esc_url(plugins_url('images/bbpui-screenshot-toolbar.png', __FILE__)).'" alt="Toolbar screenshot" />
 			<p>Then click the Browse button in the image dialog to select and upload an image:</p>
-			<img src="'.plugins_url('images/bbpui-screenshot-dialog.png', __FILE__).'" alt="Dialog screenshot" />
+			<img src="'.esc_url(plugins_url('images/bbpui-screenshot-dialog.png', __FILE__)).'" alt="Dialog screenshot" />
 			<h3 style="margin-top: 40px;">Supported File Formats and File Size</h3>
 			<p>This plugin supports images in JPEG, PNG, and GIF format. The maximum file size is determined by the following settings in your server\'s PHP configuration:</p>
 			<ul>
-				<li><strong>upload_max_filesize:</strong> '.ini_get('upload_max_filesize').'</li>
-				<li><strong>post_max_size:</strong> '.ini_get('post_max_size').'</li>
+				<li><strong>upload_max_filesize:</strong> '.esc_html(ini_get('upload_max_filesize')).'</li>
+				<li><strong>post_max_size:</strong> '.esc_html(ini_get('post_max_size')).'</li>
 			</ul>
 			<h3 style="margin-top: 40px;">Maintenance</h3>
 			<form action="" method="post">
@@ -135,6 +135,13 @@ function hhm_bbpui_tinymce_plugins($plugins = array()) {
 
 add_action('init', 'hm_bbpui_handle_upload');
 function hm_bbpui_handle_upload() {
+	// phpcs:disable WordPress.Security.NonceVerification -- nonces are not required for image upload because this does not pose a CSRF risk.
+	// 														 Uploaded images are validated and placed in a temporary directory under a random
+	//														 filename, where they are automatically deleted if not used in a forum post. They
+	//														 cannot be used in a post without knowing the random filename that was assigned. If
+	// 														 a file is uploaded via CSRF, it will simply be deleted when the cleanup function is
+	//														 run and it is old enough.
+	
 	if (empty($_GET['hm_bbpui_do_upload']))
 		return;
 	
@@ -146,14 +153,22 @@ function hm_bbpui_handle_upload() {
 		hm_bbpui_upload_error();
 	
 	// Check file upload
-	if (!isset($_FILES['hm_bbpui_file']) || !empty($_FILES['hm_bbpui_file']['error']) || !is_uploaded_file($_FILES['hm_bbpui_file']['tmp_name']))
+	if (!isset($_FILES['hm_bbpui_file']['tmp_name']) || !empty($_FILES['hm_bbpui_file']['error']))
 		hm_bbpui_upload_error();
+	
+	$uploadedFile = sanitize_text_field($_FILES['hm_bbpui_file']['tmp_name']);
+	if (!is_uploaded_file($uploadedFile)) {
+		hm_bbpui_upload_error();
+	}
 	
 	// Get/create temp directory
 	$uploadDir = wp_upload_dir();
 	$tempUploadDir = $uploadDir['basedir'].'/hm_bbpui_temp';
-	if (!is_dir($tempUploadDir))
-		@mkdir($tempUploadDir) or hm_bbpui_upload_error();
+	
+	WP_Filesystem();
+	global $wp_filesystem;
+	if (!$wp_filesystem->is_dir($tempUploadDir))
+		@$wp_filesystem->mkdir($tempUploadDir) or hm_bbpui_upload_error();
 	
 	// Get temp filename
 	$chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -162,42 +177,54 @@ function hm_bbpui_handle_upload() {
 		$tempName = '';
 		for ($i = 0; $i < 32; ++$i)
 			$tempName .= $chars[random_int(0, $maxChar)];
-	} while (file_exists($tempUploadDir.'/'.$tempName));
-	$dotPos = strrpos($_FILES['hm_bbpui_file']['name'], '.');
-	if ($dotPos)
-		$tempName .= substr($_FILES['hm_bbpui_file']['name'], $dotPos);
+	} while ($wp_filesystem->exists($tempUploadDir.'/'.$tempName));
 	
 	// Try to increase memory limit
 	@ini_set('memory_limit', '256M');
 	
 	// Save as an image file (for security reasons)
-	switch (strtolower($_FILES['hm_bbpui_file']['type'])) {
+	switch (strtolower( sanitize_text_field($_FILES['hm_bbpui_file']['type'] ?? '') )) {
 		case 'image/jpeg':
-			$img = imagecreatefromjpeg($_FILES['hm_bbpui_file']['tmp_name']) or hm_bbpui_upload_error();
-			$img = bbpui_apply_exif_rotation($img, $_FILES['hm_bbpui_file']['tmp_name']) or hm_bbpui_upload_error();
+			$img = imagecreatefromjpeg($uploadedFile) or hm_bbpui_upload_error();
+			$img = bbpui_apply_exif_rotation($img, $uploadedFile) or hm_bbpui_upload_error();
+			$tempName .= '.jpg';
 			imagejpeg($img, $tempUploadDir.'/'.$tempName) or hm_bbpui_upload_error();
 			break;
 		case 'image/png':
-			$img = imagecreatefrompng($_FILES['hm_bbpui_file']['tmp_name']) or hm_bbpui_upload_error();
+			$img = imagecreatefrompng($uploadedFile) or hm_bbpui_upload_error();
 			imagesavealpha($img, true) or hm_bbpui_upload_error();
 			imagealphablending($img, false) or hm_bbpui_upload_error();
+			$tempName .= '.png';
 			imagepng($img, $tempUploadDir.'/'.$tempName) or hm_bbpui_upload_error();
 			break;
 		case 'image/gif':
-			$img = imagecreatefromgif($_FILES['hm_bbpui_file']['tmp_name']) or hm_bbpui_upload_error();
+			$img = imagecreatefromgif($uploadedFile) or hm_bbpui_upload_error();
+			$tempName .= '.gif';
 			imagegif($img, $tempUploadDir.'/'.$tempName) or hm_bbpui_upload_error();
 			break;
 		default:
-			($img = imagecreatefromjpeg($_FILES['hm_bbpui_file']['tmp_name']) && bbpui_apply_exif_rotation($img, $_FILES['hm_bbpui_file']['tmp_name']) && imagejpeg($img, $tempUploadDir.'/'.$tempName)) or
-			($img = imagecreatefrompng($_FILES['hm_bbpui_file']['tmp_name']) && imagesavealpha($img, true) && imagepng($img, $tempUploadDir.'/'.$tempName)) or
-			($img = imagecreatefromgif($_FILES['hm_bbpui_file']['tmp_name'])  && imagegif($img, $tempUploadDir.'/'.$tempName)) or
-			hm_bbpui_upload_error();
+			if ($img = @imagecreatefromjpeg($uploadedFile)) {
+				$img = bbpui_apply_exif_rotation($img, $uploadedFile) or hm_bbpui_upload_error();
+				$tempName .= '.jpg';
+				imagejpeg($img, $tempUploadDir.'/'.$tempName) or hm_bbpui_upload_error();
+			} else if ($img = @imagecreatefrompng($uploadedFile)) {
+				imagesavealpha($img, true) or hm_bbpui_upload_error();
+				imagealphablending($img, false) or hm_bbpui_upload_error();
+				$tempName .= '.png';
+				imagepng($img, $tempUploadDir.'/'.$tempName) or hm_bbpui_upload_error();
+			} else if ($img = @imagecreatefromgif($uploadedFile)) {
+				$tempName .= '.gif';
+				imagegif($img, $tempUploadDir.'/'.$tempName) or hm_bbpui_upload_error();
+			} else {
+				hm_bbpui_upload_error();
+			}
 	}
 	
-	@unlink($_FILES['hm_bbpui_file']['tmp_name']);
-	echo($uploadDir['baseurl'].'/hm_bbpui_temp/'.$tempName);
+	@$wp_filesystem->delete($uploadedFile);
+	echo(esc_url($uploadDir['baseurl'].'/hm_bbpui_temp/'.$tempName));
 	exit;
 	
+	// phpcs:enable WordPress.Security.NonceVerification
 }
 
 function hm_bbpui_upload_error() {
@@ -227,8 +254,8 @@ function bbpui_apply_exif_rotation($img, $sourceFile) {
 
 add_action('wp_enqueue_scripts', 'hm_bbpui_enqueue_scripts');
 function hm_bbpui_enqueue_scripts() {
-	wp_enqueue_script('hm_bbpui', plugins_url('js/bbp-image-upload.js', __FILE__), array('jquery'), '1.1.17');
-	wp_enqueue_style('hm_bbpui', plugins_url('css/bbp-image-upload.css', __FILE__));
+	wp_enqueue_script('hm_bbpui', plugins_url('js/bbp-image-upload.js', __FILE__), array('jquery'), '1.1.20', true);
+	wp_enqueue_style('hm_bbpui', plugins_url('css/bbp-image-upload.css', __FILE__), [], '1.1.20');
 }
 
 add_action('wp_insert_post', 'hm_bbpui_insert_post');
@@ -242,16 +269,19 @@ function hm_bbpui_insert_post($postId) {
 	if (!empty($matches[1])) {
 		
 		$uploadDir = wp_upload_dir();
+			
+		WP_Filesystem();
+		global $wp_filesystem;
 		
-		if (!is_dir($uploadDir['basedir'].'/hm_bbpui'))
-			mkdir($uploadDir['basedir'].'/hm_bbpui');
-		if (!is_dir($uploadDir['basedir'].'/hm_bbpui/'.$post->ID))
-			mkdir($uploadDir['basedir'].'/hm_bbpui/'.$post->ID);
+		if (!$wp_filesystem->is_dir($uploadDir['basedir'].'/hm_bbpui'))
+			$wp_filesystem->mkdir($uploadDir['basedir'].'/hm_bbpui');
+		if (!$wp_filesystem->is_dir($uploadDir['basedir'].'/hm_bbpui/'.$post->ID))
+			$wp_filesystem->mkdir($uploadDir['basedir'].'/hm_bbpui/'.$post->ID);
 	
 		foreach(array_unique($matches[1]) as $match) {
 			if (strpos($match, '/') || strpos($match, '\\'))
 				continue;
-			@rename($uploadDir['basedir'].'/hm_bbpui_temp/'.$match, $uploadDir['basedir'].'/hm_bbpui/'.$post->ID.'/'.$match);
+			@$wp_filesystem->move($uploadDir['basedir'].'/hm_bbpui_temp/'.$match, $uploadDir['basedir'].'/hm_bbpui/'.$post->ID.'/'.$match);
 			$post->post_content = str_replace('/hm_bbpui_temp/'.$match, '/hm_bbpui/'.$post->ID.'/'.$match, $post->post_content);
 		}
 		
@@ -282,12 +312,11 @@ add_action('delete_post', 'hm_bbpui_delete_post');
 function hm_bbpui_delete_post($postId) {
 	$uploadDir = wp_upload_dir();
 	$postUploadDir = $uploadDir['basedir'].'/hm_bbpui/'.$postId;
-	if (is_dir($postUploadDir)) {
-		foreach (scandir($postUploadDir) as $dirItem) {
-			if (is_file($postUploadDir.'/'.$dirItem))
-				@unlink($postUploadDir.'/'.$dirItem);
-		}
-		@rmdir($postUploadDir);
+	
+	WP_Filesystem();
+	global $wp_filesystem;
+	if ($wp_filesystem->is_dir($postUploadDir)) {
+		@$wp_filesystem->rmdir($postUploadDir, true);
 	}
 }
 
@@ -295,10 +324,12 @@ add_action('hm_bbpui_clean_temp_dir', 'hm_bbpui_clean_temp_dir');
 function hm_bbpui_clean_temp_dir() {
 	$uploadDir = wp_upload_dir();
 	$timeThreshold = time() - 86400;
-	foreach (scandir($uploadDir['basedir'].'/hm_bbpui_temp') as $dirItem) {
-		$dirItem = $uploadDir['basedir'].'/hm_bbpui_temp/'.$dirItem;
-		if (is_file($dirItem) && filemtime($dirItem) < $timeThreshold)
-			@unlink($dirItem);
+	
+	WP_Filesystem();
+	global $wp_filesystem;
+	foreach ($wp_filesystem->dirlist($uploadDir['basedir'].'/hm_bbpui_temp') as $dirItem) {
+		if ($dirItem['lastmodunix'] < $timeThreshold)
+			@$wp_filesystem->delete($uploadDir['basedir'].'/hm_bbpui_temp/'.$dirItem['name']);
 	}
 }
 
@@ -306,9 +337,12 @@ function hm_bbpui_cleanup() {
 	// Delete directories for non-existent posts
 	$uploadDir = wp_upload_dir();
 	$storageDir = $uploadDir['basedir'].'/hm_bbpui';
-	foreach (scandir($storageDir) as $dirItem) {
-		if (is_numeric($dirItem) && is_dir($storageDir.'/'.$dirItem) && get_post_status($dirItem) === false) {
-			hm_bbpui_delete_post($dirItem);
+	
+	WP_Filesystem();
+	global $wp_filesystem;
+	foreach ($wp_filesystem->dirlist($storageDir) as $dirItem) {
+		if (is_numeric($dirItem['name']) && $dirItem['type'] === 'd' && get_post_status($dirItem['name']) === false) {
+			hm_bbpui_delete_post($dirItem['name']);
 		}
 	}
 	
@@ -343,13 +377,11 @@ if (is_admin() && get_option('hm_bbpui_rd_notice_hidden') != 1 && time() - get_o
 	add_action('wp_ajax_hm_bbpui_rd_notice_hide', 'hm_bbpui_rd_notice_hide');
 }
 function hm_bbpui_rd_notice() {
-	$pre = 'hm_bbpui';
-	$slug = 'image-upload-for-bbpress';
 	echo('
-		<div id="'.$pre.'_rd_notice" class="updated notice is-dismissible"><p>Do you use the <strong>Image Upload for BBPress</strong> plugin?
-		Please support our free plugin by <a href="https://wordpress.org/support/view/plugin-reviews/'.$slug.'" target="_blank">writing a review</a> and/or <a href="https://potentplugins.com/donate/?utm_source='.$slug.'&amp;utm_medium=link&amp;utm_campaign=wp-plugin-notice-donate-link" target="_blank">making a donation</a>!
+		<div id="hm_bbpui_rd_notice" class="updated notice is-dismissible"><p>Do you use the <strong>Image Upload for BBPress</strong> plugin?
+		Please support our free plugin by <a href="https://wordpress.org/support/view/plugin-reviews/image-upload-for-bbpress" target="_blank">writing a review</a> and/or <a href="https://potentplugins.com/donate/?utm_source=image-upload-for-bbpress'.'&amp;utm_medium=link&amp;utm_campaign=wp-plugin-notice-donate-link" target="_blank">making a donation</a>!
 		Thanks!</p></div>
-		<script>jQuery(document).ready(function($){$(\'#'.$pre.'_rd_notice\').on(\'click\', \'.notice-dismiss\', function(){jQuery.post(ajaxurl, {action:\'hm_bbpui_rd_notice_hide\'})});});</script>
+		<script>jQuery(document).ready(function($){$(\'#hm_bbpui_rd_notice\').on(\'click\', \'.notice-dismiss\', function(){jQuery.post(ajaxurl, {action:\'hm_bbpui_rd_notice_hide\'})});});</script>
 	');
 }
 function hm_bbpui_rd_notice_hide() {
