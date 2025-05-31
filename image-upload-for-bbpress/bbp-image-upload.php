@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Inline Image Upload for BBPress
  * Description: Upload inline images to BBPress forum topics and replies.
- * Version: 1.1.20
+ * Version: 1.1.19
  * Author: WP Zone
  * Author URI: https://wpzone.co/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-plugin-author-uri
  * License: GNU General Public License version 3 or later
@@ -224,7 +224,6 @@ function hm_bbpui_handle_upload() {
 	echo(esc_url($uploadDir['baseurl'].'/hm_bbpui_temp/'.$tempName));
 	exit;
 	
-	// phpcs:enable WordPress.Security.NonceVerification
 }
 
 function hm_bbpui_upload_error() {
