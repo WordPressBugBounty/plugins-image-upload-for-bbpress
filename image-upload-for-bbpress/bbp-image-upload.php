@@ -2,9 +2,9 @@
 /**
  * Plugin Name: Inline Image Upload for BBPress
  * Description: Upload inline images to BBPress forum topics and replies.
- * Version: 1.1.19
- * Author: WP Zone
- * Author URI: https://wpzone.co/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-plugin-author-uri
+ * Version: 1.1.21
+ * Author: BerryPress
+ * Author URI: https://berrypress.com/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-plugin-author-uri
  * License: GNU General Public License version 3 or later
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  */
@@ -12,7 +12,7 @@
 /*
 
 Image Upload for bbPress plugin
-Copyright (C) 2024  WP Zone
+Copyright (C) 2025 BerryPress
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ function hm_bbpui_admin_page() {
 			
 	');
 	echo('<div style="background-color: #fff; border: 1px solid #ccc; padding: 20px; max-width: 800px; margin-top: 10px;">
-		<h3 style="margin: 0;">Upgrade to <a href="https://wpzone.co/product/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-upgrade-link" target="_blank">Image Upload for BBPress Pro</a> for more features and options!</h3>
+		<h3 style="margin: 0;">Upgrade to <a href="https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro//?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-upgrade-link" target="_blank">Image Upload for BBPress Pro</a> for more features and options!</h3>
 		<ul>
 <li style="color: #f00; font-weight: bold;">Upload multiple images at once with the responsive drag-and-drop uploader!</li>
 <li><span style="color: #f00; font-weight: bold;">Use S3 for image storage!</span> (Optional; requires add-on plugin purchase.)</li>
@@ -83,7 +83,7 @@ function hm_bbpui_admin_page() {
 <li>Allow users to upload animated GIFs while preserving animation.</li>
 		</ul>
 		<strong>Receive a 10% discount with the coupon code <span style="color: #f00;">BBPIMAGES10</span>! (Not valid with any other offer.)</strong>
-		<a href="https://wpzone.co/product/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-upgrade-link" target="_blank">Buy Now &gt;</a>
+		<a href="https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-upgrade-link" target="_blank">Buy Now &gt;</a>
 	</div>');
 	echo('
 			<h3 style="margin-top: 40px;">Usage Instructions</h3>
@@ -253,8 +253,8 @@ function bbpui_apply_exif_rotation($img, $sourceFile) {
 
 add_action('wp_enqueue_scripts', 'hm_bbpui_enqueue_scripts');
 function hm_bbpui_enqueue_scripts() {
-	wp_enqueue_script('hm_bbpui', plugins_url('js/bbp-image-upload.js', __FILE__), array('jquery'), '1.1.20', true);
-	wp_enqueue_style('hm_bbpui', plugins_url('css/bbp-image-upload.css', __FILE__), [], '1.1.20');
+	wp_enqueue_script('hm_bbpui', plugins_url('js/bbp-image-upload.js', __FILE__), array('jquery'), '1.1.21', true);
+	wp_enqueue_style('hm_bbpui', plugins_url('css/bbp-image-upload.css', __FILE__), [], '1.1.21');
 }
 
 add_action('wp_insert_post', 'hm_bbpui_insert_post');

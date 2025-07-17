@@ -1,5 +1,5 @@
 /**
- * Author: WP Zone
+ * Author: BerryPress
  * License: GNU General Public License version 3 or later
  */
 function hm_bbpui_file_upload(field_id) {

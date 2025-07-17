@@ -1,21 +1,21 @@
 <?php
 /**
- * Author: WP Zone
+ * Author: BerryPress
  * License: GNU General Public License version 3 or later
  */
  ?>
-<div style="background-color: #adb67e; max-width: 500px; text-align: center; padding: 20px; color: #fff;">
-    <a href="https://wpzone.co/?utm_source=<?php echo(esc_attr($potent_slug)); ?>&amp;utm_medium=link&amp;utm_campaign=wp-plugin-credit-link" target="_blank">
-        <img src="<?php echo(esc_url(plugins_url('images/wp_zone_logo.png', __FILE__))); ?>" alt="WP Zone" style="max-width: 100%; margin-bottom: 20px;" />
+<div style="background-color: #F4F7FC; border: 1px solid #0078FF; border-radius: 30px; max-width: 500px; text-align: center; padding: 20px; color: #000;">
+    <a href="https://berrypress.com/?utm_source=plugin-<?php echo(esc_attr($potent_slug)); ?>&amp;utm_medium=plugin-footer&amp;utm_campaign=wp-plugin-credit-link" target="_blank">
+        <img src="<?php echo(esc_url(plugins_url('images/berrypress_logo.svg', __FILE__))); ?>" alt="BerryPress" style="max-width: 220px; margin-bottom: 20px;" />
     </a>
-    <div style="margin-bottom: 10px; font-size: 1.2em;">
+    <div style="margin-bottom: 20px; font-size: 1.2em;">
         <strong>If you like our free plugin, please:</strong>
     </div>
     <div style="margin-bottom: 10px;">
-        <a href="https://wordpress.org/support/view/plugin-reviews/<?php echo(esc_attr($potent_slug)); ?>" target="_blank" class="button-secondary">Write a Review</a>
+        <a href="https://wordpress.org/support/view/plugin-reviews/<?php echo(esc_attr($potent_slug)); ?>" target="_blank" class="button-primary">Write a Review</a>
     </div>
     <div style="margin-bottom: 10px;">
-        <a href="https://www.facebook.com/aspengrovestudios" target="_blank" class="button-secondary">Like us on Facebook</a>
-        <a href="https://www.youtube.com/channel/UCdlXMjnBCYOTcd4XZ-LbihQ" target="_blank" class="button-secondary">Subscribe our YouTube Channel</a>
+        <a href="https://www.facebook.com/berrypresscom" target="_blank" class="button-primary">Like us on Facebook</a>
+        <a href="https://www.youtube.com/@berrypresscom" target="_blank" class="button-primary">Subscribe our YouTube Channel</a>
     </div>
 </div>
