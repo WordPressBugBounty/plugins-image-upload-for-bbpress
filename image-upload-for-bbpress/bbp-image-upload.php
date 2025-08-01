@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Inline Image Upload for BBPress
  * Description: Upload inline images to BBPress forum topics and replies.
- * Version: 1.1.21
+ * Version: 1.1.22
  * Author: BerryPress
  * Author URI: https://berrypress.com/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-plugin-author-uri
  * License: GNU General Public License version 3 or later
@@ -165,7 +165,9 @@ function hm_bbpui_handle_upload() {
 	$uploadDir = wp_upload_dir();
 	$tempUploadDir = $uploadDir['basedir'].'/hm_bbpui_temp';
 	
+	require_once(ABSPATH.'/wp-admin/includes/file.php');
 	WP_Filesystem();
+	
 	global $wp_filesystem;
 	if (!$wp_filesystem->is_dir($tempUploadDir))
 		@$wp_filesystem->mkdir($tempUploadDir) or hm_bbpui_upload_error();
@@ -224,6 +226,7 @@ function hm_bbpui_handle_upload() {
 	echo(esc_url($uploadDir['baseurl'].'/hm_bbpui_temp/'.$tempName));
 	exit;
 	
+	// phpcs:enable WordPress.Security.NonceVerification
 }
 
 function hm_bbpui_upload_error() {
@@ -253,8 +256,8 @@ function bbpui_apply_exif_rotation($img, $sourceFile) {
 
 add_action('wp_enqueue_scripts', 'hm_bbpui_enqueue_scripts');
 function hm_bbpui_enqueue_scripts() {
-	wp_enqueue_script('hm_bbpui', plugins_url('js/bbp-image-upload.js', __FILE__), array('jquery'), '1.1.21', true);
-	wp_enqueue_style('hm_bbpui', plugins_url('css/bbp-image-upload.css', __FILE__), [], '1.1.21');
+	wp_enqueue_script('hm_bbpui', plugins_url('js/bbp-image-upload.js', __FILE__), array('jquery'), '1.1.22', true);
+	wp_enqueue_style('hm_bbpui', plugins_url('css/bbp-image-upload.css', __FILE__), [], '1.1.22');
 }
 
 add_action('wp_insert_post', 'hm_bbpui_insert_post');
@@ -268,7 +271,8 @@ function hm_bbpui_insert_post($postId) {
 	if (!empty($matches[1])) {
 		
 		$uploadDir = wp_upload_dir();
-			
+		
+		require_once(ABSPATH.'/wp-admin/includes/file.php');
 		WP_Filesystem();
 		global $wp_filesystem;
 		
@@ -312,6 +316,7 @@ function hm_bbpui_delete_post($postId) {
 	$uploadDir = wp_upload_dir();
 	$postUploadDir = $uploadDir['basedir'].'/hm_bbpui/'.$postId;
 	
+	require_once(ABSPATH.'/wp-admin/includes/file.php');
 	WP_Filesystem();
 	global $wp_filesystem;
 	if ($wp_filesystem->is_dir($postUploadDir)) {
@@ -324,7 +329,9 @@ function hm_bbpui_clean_temp_dir() {
 	$uploadDir = wp_upload_dir();
 	$timeThreshold = time() - 86400;
 	
+	require_once(ABSPATH.'/wp-admin/includes/file.php');
 	WP_Filesystem();
+	
 	global $wp_filesystem;
 	foreach ($wp_filesystem->dirlist($uploadDir['basedir'].'/hm_bbpui_temp') as $dirItem) {
 		if ($dirItem['lastmodunix'] < $timeThreshold)
@@ -337,6 +344,7 @@ function hm_bbpui_cleanup() {
 	$uploadDir = wp_upload_dir();
 	$storageDir = $uploadDir['basedir'].'/hm_bbpui';
 	
+	require_once(ABSPATH.'/wp-admin/includes/file.php');
 	WP_Filesystem();
 	global $wp_filesystem;
 	foreach ($wp_filesystem->dirlist($storageDir) as $dirItem) {
