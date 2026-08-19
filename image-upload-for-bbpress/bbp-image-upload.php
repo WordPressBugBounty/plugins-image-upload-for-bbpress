@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Inline Image Upload for BBPress
  * Description: Upload inline images to BBPress forum topics and replies.
- * Version: 1.1.24
+ * Version: 1.1.25
  * Author: BerryPress
  * Author URI: https://berrypress.com/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-plugin-author-uri
  * License: GNU General Public License version 3 or later

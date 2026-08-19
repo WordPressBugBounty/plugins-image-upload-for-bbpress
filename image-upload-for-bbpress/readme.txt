@@ -3,7 +3,7 @@ Contributors: berrypress
 Tags: bbpress, image, images, inline, media
 Requires at least: 3.5
 Tested up to: 7.0
-Stable tag: 1.1.24
+Stable tag: 1.1.25
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -54,6 +54,9 @@ Alternatively, you can manually upload the plugin to your wp-content/plugins dir
 2. The Browse button in the Image dialog, which allows the user to select and upload an image from their computer for inline insertion into their forum topic or reply.
 
 == Changelog ==
+
+= 1.1.25 =
+- Fix: broken logo path
 
 = 1.1.24 =
 - Improvement: Better caching support
