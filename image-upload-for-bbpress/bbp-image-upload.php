@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Inline Image Upload for BBPress
  * Description: Upload inline images to BBPress forum topics and replies.
- * Version: 1.1.23
+ * Version: 1.1.24
  * Author: BerryPress
  * Author URI: https://berrypress.com/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-plugin-author-uri
  * License: GNU General Public License version 3 or later
@@ -12,7 +12,7 @@
 /*
 
 Image Upload for bbPress plugin
-Copyright (C) 2025 BerryPress
+Copyright (C) 2026 BerryPress
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ function hm_bbpui_admin_page() {
 			
 	');
 	echo('<div style="background-color: #fff; border: 1px solid #ccc; padding: 20px; max-width: 800px; margin-top: 10px;">
-		<h3 style="margin: 0;">Upgrade to <a href="https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro//?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-upgrade-link" target="_blank">Image Upload for BBPress Pro</a> for more features and options!</h3>
+		<h3 style="margin: 0;">Upgrade to <a href="https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-upgrade-link" target="_blank">Image Upload for BBPress Pro</a> for more features and options!</h3>
 		<ul>
 <li style="color: #f00; font-weight: bold;">Upload multiple images at once with the responsive drag-and-drop uploader!</li>
 <li><span style="color: #f00; font-weight: bold;">Use S3 for image storage!</span> (Optional; requires add-on plugin purchase.)</li>
@@ -266,6 +266,12 @@ function hm_bbpui_insert_post($postId) {
 	if ($post->post_type != 'topic' && $post->post_type != 'reply')
 		return;
 	
+	// For some reason the passed $post may have empty content in some cases - then we need to retrieve the post again
+	if ( empty($post->post_content) ) {
+		hm_bbpui_force_clear_post_cache($postId);
+		$post = get_post($postId);
+	}
+	
 	preg_match_all('/\/hm_bbpui_temp\/(.+)["\']/iU', $post->post_content, $matches);
 	
 	if (!empty($matches[1])) {
@@ -308,6 +314,18 @@ function hm_bbpui_insert_post($postId) {
 		}
 		
 		add_action('post_updated', 'wp_save_post_revision', $saveRevisionPriority);
+		add_action('wp_insert_post', 'hm_bbpui_insert_post');
+		
+		hm_bbpui_force_clear_post_cache($postId);
+	}
+}
+
+function hm_bbpui_force_clear_post_cache($postId)
+{
+	$wasSuspended = wp_suspend_cache_invalidation(false);
+	clean_post_cache($postId);
+	if ($wasSuspended !== false) {
+		wp_suspend_cache_invalidation($wasSuspended);
 	}
 }
 

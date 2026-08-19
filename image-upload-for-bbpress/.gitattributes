@@ -1,0 +1,7 @@
+# exclude the following from downloaded archives and WordPress.org trunk
+
+# WordPress.org
+.wordpress-org export-ignore
+.DS_Store export-ignore
+.gitattributes export-ignore
+.gitlab-ci.yml export-ignore

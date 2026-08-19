@@ -2,8 +2,8 @@
 Contributors: berrypress
 Tags: bbpress, image, images, inline, media
 Requires at least: 3.5
-Tested up to: 6.8
-Stable tag: 1.1.23
+Tested up to: 7.0
+Stable tag: 1.1.24
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -30,13 +30,12 @@ Amazon Web Services, the "Powered by Amazon Web Services" logo, AWS, Amazon Simp
 If you like this plugin, please consider leaving a comment or review.
 
 ## You may also like these plugins
-[WP Zone](https://berrypress.com/) has built a bunch of plugins. Check out other favorites here on the repository and don’t forget to leave a 5-star review to help others in the community decide.
+[BerryPress](https://berrypress.com/) has built a bunch of plugins. Check out other favorites here on the repository and don’t forget to leave a 5-star review to help others in the community decide.
 
 * [Product Sales Report for WooCommerce](https://wordpress.org/plugins/product-sales-report-for-woocommerce/) - setup a custom sales report for the products in your WooCommerce store with toggle sorting options. Including or excluding items based on date range, sale status, product category and id, define display order, choose what fields to include, and generate your report with a click.
 * [Export Order Items for WooCommerce](https://wordpress.org/plugins/export-order-items-for-woocommerce/) - export the order details for each sale in your WooCommerce store. Simplify order fulfillment, generate accounting reports in a few clicks, and download into CSV format for readability and universal compatibility with Export Order Items.
-* [Inline Image Upload for BBPress](https://wordpress.org/plugins/image-upload-for-bbpress/) - enables the TinyMCE WYSIWYG editor for BBPress forum topics and replies and adds a button to the editor’s “Insert/edit image” dialog that allows forum users to upload images from their computer and insert them inline into their posts.
 
-To view WP Zone's premium WordPress plugins, visit our [WordPress products catalog page](https://berrypress.com/shop/).
+To view BerryPress's premium WordPress plugins, visit our [WordPress products catalog page](https://berrypress.com/shop/).
 
 == Installation ==
 
@@ -55,6 +54,9 @@ Alternatively, you can manually upload the plugin to your wp-content/plugins dir
 2. The Browse button in the Image dialog, which allows the user to select and upload an image from their computer for inline insertion into their forum topic or reply.
 
 == Changelog ==
+
+= 1.1.24 =
+- Improvement: Better caching support
 
 = 1.1.23 =
 - Fix duplicate image button, e.g. in BuddyPress
