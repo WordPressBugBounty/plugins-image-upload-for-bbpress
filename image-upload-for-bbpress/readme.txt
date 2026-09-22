@@ -1,9 +1,10 @@
 === Inline Image Upload for BBPress ===
 Contributors: berrypress
 Tags: bbpress, image, images, inline, media
-Requires at least: 3.5
-Tested up to: 7.0
-Stable tag: 1.1.25
+Requires at least: 6.5.0
+Tested up to: 7.1
+Requires PHP: 7.0
+Stable tag: 1.2.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -15,7 +16,6 @@ This plugin enables the TinyMCE WYSIWYG editor for BBPress forum topics and repl
 
 A [pro version](https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-repo-upgrade-link) with the following additional features is also available:
 
-* Change the directory where uploaded images are stored.
 * Limit which user roles are permitted to upload images.
 * Limit the number of uploaded images allowed per post.
 * Automatically downsize images to fit specified maximum dimensions.
@@ -54,6 +54,16 @@ Alternatively, you can manually upload the plugin to your wp-content/plugins dir
 2. The Browse button in the Image dialog, which allows the user to select and upload an image from their computer for inline insertion into their forum topic or reply.
 
 == Changelog ==
+
+= 1.2.0 =
+- Added a pluggable image storage engine, matching the Pro version's architecture
+- Added native Infinite Uploads support as a selectable storage engine, with its own settings panel
+- Cleanup now also removes images that were deleted from existing posts, not just orphaned post directories
+- Plugin redesign
+
+= 1.1.26 =
+- Redesigned the settings page with the BerryPress admin framework
+- Added a Compatible Plugins section
 
 = 1.1.25 =
 - Fix: broken logo path

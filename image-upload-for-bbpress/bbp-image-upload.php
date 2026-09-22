@@ -2,11 +2,14 @@
 /**
  * Plugin Name: Inline Image Upload for BBPress
  * Description: Upload inline images to BBPress forum topics and replies.
- * Version: 1.1.25
+ * Version: 1.2.0
  * Author: BerryPress
  * Author URI: https://berrypress.com/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-plugin-author-uri
  * License: GNU General Public License version 3 or later
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
+ * Requires at least: 6.5.0
+ * Tested up to:      7.1
+ * Requires PHP:      7.0
  */
 
 /*
@@ -44,70 +47,214 @@ the license directory for GPL version 3 text).
 
 */
 
+defined('ABSPATH') || exit;
+
+/*
+ * Image storage engine
+ *
+ * Image storage is handled by pluggable engine classes (includes/FilesystemStorage.php,
+ * includes/InfiniteUploadsStorage.php) that are shared, unchanged, with Image Upload for bbPress
+ * Pro. Those classes call a handful of helper functions and a filter by fixed name
+ * (hm_bbpui_get_option(), hm_bbpui_set_options(), hm_bbpui_check_storage_dir(),
+ * hm_bbpui_get_temp_storage_dir(), hm_bbpui_filter_existing_images(), and the
+ * 'hm_bbpuip_storage_engines' filter) so this plugin provides them under those same names -
+ * this whole block is written to stay copy/paste-compatible with Pro's equivalent code.
+ */
+
+define('HM_BBPUI_VERSION', '1.2.0');
+
+function hm_bbpui_option_defaults()
+{
+    return array(
+        'storage_dir' => '{uploads}/hm_bbpui',
+        'storage_url' => '{uploads}/hm_bbpui',
+        'storage_engine' => 'filesystem',
+        'temp_storage_dir' => '{uploads}/hm_bbpui_temp',
+        'temp_storage_url' => '{uploads}/hm_bbpui_temp',
+    );
+}
+
+function hm_bbpui_get_option($option)
+{
+    global $hm_bbpui_options;
+    if (!isset($hm_bbpui_options)) {
+        $hm_bbpui_options = get_option('hm_bbpuip_options');
+        if (empty($hm_bbpui_options)) {
+            $hm_bbpui_options = hm_bbpui_option_defaults();
+            update_option('hm_bbpuip_options', $hm_bbpui_options);
+        }
+    }
+    if (isset($hm_bbpui_options[$option]) && $hm_bbpui_options[$option] !== '') {
+        return $hm_bbpui_options[$option];
+    }
+    $defaults = hm_bbpui_option_defaults();
+    return isset($defaults[$option]) ? $defaults[$option] : null;
+}
+
+function hm_bbpui_set_options($options)
+{
+    global $hm_bbpui_options;
+    if (!isset($hm_bbpui_options)) {
+        $hm_bbpui_options = get_option('hm_bbpuip_options');
+        if (empty($hm_bbpui_options)) {
+            $hm_bbpui_options = hm_bbpui_option_defaults();
+        }
+    }
+    $hm_bbpui_options = array_merge($hm_bbpui_options, array_intersect_key($options, hm_bbpui_option_defaults()));
+    update_option('hm_bbpuip_options', $hm_bbpui_options);
+}
+
+add_filter('infinite_uploads_sync_exclusions', 'hm_bbpui_iu_exclude_temp_dir');
+function hm_bbpui_iu_exclude_temp_dir($excl)
+{
+	$storageDir = hm_bbpui_get_option('temp_storage_dir');
+	
+	if (strpos($storageDir, '{uploads}/') === 0) {
+		$excl[] = substr($storageDir, 9);
+	}
+	
+	return $excl;
+}
+
+function hm_bbpui_check_storage_dir($dir)
+{
+    if (strpos($dir, '{uploads}') !== false) {
+        $uploadDir = HM_BBPUI_Filesystem_Storage::getUploadDir();
+        $dir = str_replace('{uploads}', $uploadDir['basedir'], $dir);
+    }
+
+	require_once(ABSPATH.'/wp-admin/includes/file.php');
+	WP_Filesystem();
+	global $wp_filesystem;
+		
+    if (!$wp_filesystem->is_dir($dir) && !wp_mkdir_p($dir))
+        return false;
+    if (!$wp_filesystem->is_dir($dir . '/0') && !wp_mkdir_p($dir . '/0'))
+        return false;
+    if (!file_put_contents($dir . '/0/test', 'test'))
+        return false;
+    $wp_filesystem->delete($dir . '/0', true);
+    return true;
+}
+
+function hm_bbpui_get_temp_storage_dir()
+{
+    $storageDir = hm_bbpui_get_option('temp_storage_dir');
+    if (strpos($storageDir, '{uploads}') !== false) {
+        $uploadDir = HM_BBPUI_Filesystem_Storage::getUploadDir();
+        $storageDir = str_replace('{uploads}', $uploadDir['basedir'], $storageDir);
+    }
+	
+	require_once(ABSPATH.'/wp-admin/includes/file.php');
+	WP_Filesystem();
+	global $wp_filesystem;
+		
+    if (!$wp_filesystem->is_dir($storageDir) && !wp_mkdir_p($storageDir))
+        return false;
+    return $storageDir;
+}
+
+function hm_bbpui_get_temp_storage_url()
+{
+    $storageUrl = hm_bbpui_get_option('temp_storage_url');
+    if (strpos($storageUrl, '{uploads}') !== false) {
+        $uploadDir = HM_BBPUI_Filesystem_Storage::getUploadDir();
+        $storageUrl = str_replace('{uploads}', $uploadDir['baseurl'], $storageUrl);
+    }
+    return $storageUrl;
+}
+
+function hm_bbpui_filter_existing_images($postId, $images)
+{
+    $post = get_post($postId);
+    if (empty($post)) {
+        return array();
+    }
+    foreach ($images as $i => $image) {
+        if (strpos($post->post_content, $postId . '/' . $image) !== false || strpos($post->post_content, $postId . '/T' . $image) !== false) {
+            unset($images[$i]);
+        }
+    }
+    return $images;
+}
+
+function hm_bbpui_get_storage_engines()
+{
+    global $hm_bbpuip_storage_engines;
+    if (!isset($hm_bbpuip_storage_engines)) {
+        $hm_bbpuip_storage_engines = apply_filters('hm_bbpuip_storage_engines', array());
+    }
+    return $hm_bbpuip_storage_engines;
+}
+
+function hm_bbpui_get_storage_class()
+{
+    $engines = hm_bbpui_get_storage_engines();
+    $enabledEngine = hm_bbpui_get_option('storage_engine');
+    return $engines[$enabledEngine == 'filesystem' || (isset($engines[$enabledEngine]) && $engines[$enabledEngine]['class']::isAvailable()) ? $enabledEngine : 'filesystem']['class'];
+}
+
+function hm_bbpui_get_storage($postId, $create = true)
+{
+    $engine = hm_bbpui_get_storage_class();
+    return new $engine($postId, $create);
+}
+
+add_action('plugins_loaded', function() {
+	$includesDir = __DIR__ . '/includes/';
+	
+	// Include default filesystem storage engine
+	include($includesDir . 'FilesystemStorage.php');
+	// Infinite Uploads (https://infiniteuploads.com) offloads whatever the Filesystem engine already
+	// wrote to disk - not a separate storage backend, so this just gates the option on the companion
+	// plugin being active.
+	include($includesDir . 'InfiniteUploadsStorage.php');
+	$storageClass = hm_bbpui_get_storage_class();
+	if (method_exists($storageClass, 'init')) {
+		$storageClass::init();
+	}
+});
+
 add_filter('plugin_action_links_'.plugin_basename(__FILE__), 'hm_bbpui_action_links');
 function hm_bbpui_action_links($links) {
-	array_unshift($links, '<a href="'.esc_url(get_admin_url(null, 'options-general.php?page=hm_bbpui')).'">About</a>');
+	$upgradeLink = '<a href="https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-row-link" target="_blank">'.esc_html__('Upgrade to Pro', 'image-upload-for-bbpress').'</a>';
+	array_unshift($links, $upgradeLink);
+	array_unshift($links, '<a href="'.esc_url(get_admin_url(null, 'admin.php?page=hm_bbpui')).'">'.esc_html__('Settings', 'image-upload-for-bbpress').'</a>');
 	return $links;
 }
 
 add_action('admin_menu', 'hm_bbpui_admin_menu');
 function hm_bbpui_admin_menu() {
-	add_options_page('Image Upload for BBPress', 'Forum Images', 'activate_plugins', 'hm_bbpui', 'hm_bbpui_admin_page');
+	add_submenu_page('berrypress', 'Image Upload for BBPress', 'Forum Images', 'activate_plugins', 'hm_bbpui', 'hm_bbpui_admin_page');
+}
+
+if (is_admin() && !class_exists('BerryPressBbpImageUpload\\Admin\\Page')) {
+	require_once(__DIR__.'/includes/berrypress-admin-framework/Page.php');
+	\BerryPressBbpImageUpload\Admin\Page::maybeRegisterBerryPressAdminMenu();
+}
+
+add_action('admin_enqueue_scripts', 'hm_bbpui_admin_scripts');
+function hm_bbpui_admin_scripts() {
+	$screen = get_current_screen();
+	if ($screen && $screen->id === 'berrypress_page_hm_bbpui') {
+		wp_enqueue_style('berrypress-bbpui-admin-page', plugins_url('includes/berrypress-admin-framework/assets/css/global-admin-page.min.css', __FILE__), ['berrypress-bbpui-admin-global'], HM_BBPUI_VERSION);
+		wp_enqueue_script('berrypress-bbpui-admin-page', plugins_url('includes/berrypress-admin-framework/assets/js/global-admin-page.js', __FILE__), ['jquery'], HM_BBPUI_VERSION, true);
+		wp_enqueue_script('hm-bbpui-tooltips', plugins_url('js/bp-tooltip.js', __FILE__), [], HM_BBPUI_VERSION, true);
+		wp_enqueue_style('hm_bbpui_admin', plugins_url('css/admin.min.css', __FILE__), ['berrypress-bbpui-admin-page'], HM_BBPUI_VERSION);
+		add_filter('admin_body_class', 'hm_bbpui_admin_body_class');
+	}
+	wp_enqueue_style('berrypress-bbpui-admin-global', plugins_url('includes/berrypress-admin-framework/assets/css/global-admin.min.css', __FILE__), [], HM_BBPUI_VERSION);
+}
+
+function hm_bbpui_admin_body_class($classes) {
+	$classes .= ' berrypress-page ';
+	return $classes;
 }
 
 function hm_bbpui_admin_page() {
-	
-	if (isset($_POST['cleanup'])) {
-		check_admin_referer('hm_bbpui_cleanup', 'cleanup');
-		hm_bbpui_cleanup();
-	}
-	
-	echo('
-		<div class="wrap">
-			<h2>Image Upload for BBPress</h2>
-			
-	');
-	echo('<div style="background-color: #fff; border: 1px solid #ccc; padding: 20px; max-width: 800px; margin-top: 10px;">
-		<h3 style="margin: 0;">Upgrade to <a href="https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-upgrade-link" target="_blank">Image Upload for BBPress Pro</a> for more features and options!</h3>
-		<ul>
-<li style="color: #f00; font-weight: bold;">Upload multiple images at once with the responsive drag-and-drop uploader!</li>
-<li><span style="color: #f00; font-weight: bold;">Use S3 for image storage!</span> (Optional; requires add-on plugin purchase.)</li>
-<li>Change the directory where uploaded images are stored.</li>
-<li>Limit which user roles are permitted to upload images.</li>
-<li>Limit the number of uploaded images allowed per post.</li>
-<li>Automatically downsize images to fit specified maximum dimensions.</li>
-<li>Convert all uploaded images to the same image format, if desired.</li>
-<li>Set PNG and JPEG compression levels so images take up less disk space.</li>
-<li>Allow users to view enlarged images in a <strong>lightbox</strong> by clicking on them within the post.</li>
-<li>View total image count and file size statistics.</li>
-<li>Allow users to upload animated GIFs while preserving animation.</li>
-		</ul>
-		<strong>Receive a 10% discount with the coupon code <span style="color: #f00;">BBPIMAGES10</span>! (Not valid with any other offer.)</strong>
-		<a href="https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&amp;utm_medium=link&amp;utm_campaign=wp-plugin-upgrade-link" target="_blank">Buy Now &gt;</a>
-	</div>');
-	echo('
-			<h3 style="margin-top: 40px;">Usage Instructions</h3>
-			<p>To upload an image to a forum topic or reply, click the <em>Insert/edit image</em> button in the editor toolbar:</p>
-			<img src="'.esc_url(plugins_url('images/bbpui-screenshot-toolbar.png', __FILE__)).'" alt="Toolbar screenshot" />
-			<p>Then click the Browse button in the image dialog to select and upload an image:</p>
-			<img src="'.esc_url(plugins_url('images/bbpui-screenshot-dialog.png', __FILE__)).'" alt="Dialog screenshot" />
-			<h3 style="margin-top: 40px;">Supported File Formats and File Size</h3>
-			<p>This plugin supports images in JPEG, PNG, and GIF format. The maximum file size is determined by the following settings in your server\'s PHP configuration:</p>
-			<ul>
-				<li><strong>upload_max_filesize:</strong> '.esc_html(ini_get('upload_max_filesize')).'</li>
-				<li><strong>post_max_size:</strong> '.esc_html(ini_get('post_max_size')).'</li>
-			</ul>
-			<h3 style="margin-top: 40px;">Maintenance</h3>
-			<form action="" method="post">
-				<button type="submit" name="cleanup" value="'.esc_attr(wp_create_nonce('hm_bbpui_cleanup')).'" class="button-primary" style="margin-right: 10px;">Cleanup Unnecessary Files</button>
-			</form>
-			<div style="margin-top: 40px;"></div>
-	');
-	$potent_slug = 'image-upload-for-bbpress';
-	include(__DIR__.'/plugin-credit.php');
-	echo('
-		</div>
-	');
+	require_once(__DIR__.'/includes/admin-page.php');
+	$page = new HmBbpuiAdminPage();
+	$page->render();
 }
 
 add_filter('bbp_after_get_the_content_parse_args', 'hm_bbpiu_modify_editor', 9999);
@@ -162,16 +309,15 @@ function hm_bbpui_handle_upload() {
 	}
 	
 	// Get/create temp directory
-	$uploadDir = wp_upload_dir();
-	$tempUploadDir = $uploadDir['basedir'].'/hm_bbpui_temp';
-	
+	$tempUploadDir = hm_bbpui_get_temp_storage_dir();
+	if (!$tempUploadDir)
+		hm_bbpui_upload_error();
+
 	require_once(ABSPATH.'/wp-admin/includes/file.php');
 	WP_Filesystem();
-	
+
 	global $wp_filesystem;
-	if (!$wp_filesystem->is_dir($tempUploadDir))
-		@$wp_filesystem->mkdir($tempUploadDir) or hm_bbpui_upload_error();
-	
+
 	// Get temp filename
 	$chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
 	$maxChar = strlen($chars) - 1;
@@ -182,6 +328,7 @@ function hm_bbpui_handle_upload() {
 	} while ($wp_filesystem->exists($tempUploadDir.'/'.$tempName));
 	
 	// Try to increase memory limit
+	// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged
 	@ini_set('memory_limit', '256M');
 	
 	// Save as an image file (for security reasons)
@@ -223,7 +370,7 @@ function hm_bbpui_handle_upload() {
 	}
 	
 	@$wp_filesystem->delete($uploadedFile);
-	echo(esc_url($uploadDir['baseurl'].'/hm_bbpui_temp/'.$tempName));
+	echo(esc_url(hm_bbpui_get_temp_storage_url().'/'.$tempName));
 	exit;
 	
 	// phpcs:enable WordPress.Security.NonceVerification
@@ -256,46 +403,48 @@ function bbpui_apply_exif_rotation($img, $sourceFile) {
 
 add_action('wp_enqueue_scripts', 'hm_bbpui_enqueue_scripts');
 function hm_bbpui_enqueue_scripts() {
-	wp_enqueue_script('hm_bbpui', plugins_url('js/bbp-image-upload.js', __FILE__), array('jquery'), '1.1.22', true);
-	wp_enqueue_style('hm_bbpui', plugins_url('css/bbp-image-upload.css', __FILE__), [], '1.1.22');
+	wp_enqueue_script('hm_bbpui', plugins_url('js/bbp-image-upload.js', __FILE__), array('jquery'), HM_BBPUI_VERSION, true);
+	wp_enqueue_style('hm_bbpui', plugins_url('css/bbp-image-upload.css', __FILE__), [], HM_BBPUI_VERSION);
 }
 
-add_action('wp_insert_post', 'hm_bbpui_insert_post');
-function hm_bbpui_insert_post($postId) {
-	$post = get_post($postId);
+add_action('wp_insert_post', 'hm_bbpui_insert_post', 10, 3);
+function hm_bbpui_insert_post($postId, $post, $isUpdate) {
 	if ($post->post_type != 'topic' && $post->post_type != 'reply')
 		return;
-	
+
+	$tempUrl = hm_bbpui_get_temp_storage_url();
+	$storage = hm_bbpui_get_storage($postId);
+
 	// For some reason the passed $post may have empty content in some cases - then we need to retrieve the post again
 	if ( empty($post->post_content) ) {
 		hm_bbpui_force_clear_post_cache($postId);
 		$post = get_post($postId);
 	}
-	
-	preg_match_all('/\/hm_bbpui_temp\/(.+)["\']/iU', $post->post_content, $matches);
-	
+
+	// If this was an update, clean up any images that were removed
+	if ($isUpdate && method_exists($storage, 'cleanImages')) {
+		$storage->cleanImages();
+	}
+
+	preg_match_all('/' . preg_quote($tempUrl, '/') . '\/(.+)["\']/iU', $post->post_content, $matches);
+
 	if (!empty($matches[1])) {
-		
-		$uploadDir = wp_upload_dir();
-		
-		require_once(ABSPATH.'/wp-admin/includes/file.php');
-		WP_Filesystem();
-		global $wp_filesystem;
-		
-		if (!$wp_filesystem->is_dir($uploadDir['basedir'].'/hm_bbpui'))
-			$wp_filesystem->mkdir($uploadDir['basedir'].'/hm_bbpui');
-		if (!$wp_filesystem->is_dir($uploadDir['basedir'].'/hm_bbpui/'.$post->ID))
-			$wp_filesystem->mkdir($uploadDir['basedir'].'/hm_bbpui/'.$post->ID);
-	
+
+		$tempDir = hm_bbpui_get_temp_storage_dir();
+
 		foreach(array_unique($matches[1]) as $match) {
-			if (strpos($match, '/') || strpos($match, '\\'))
+			if (strpos($match, '/') !== false || strpos($match, '\\') !== false)
 				continue;
-			@$wp_filesystem->move($uploadDir['basedir'].'/hm_bbpui_temp/'.$match, $uploadDir['basedir'].'/hm_bbpui/'.$post->ID.'/'.$match);
-			$post->post_content = str_replace('/hm_bbpui_temp/'.$match, '/hm_bbpui/'.$post->ID.'/'.$match, $post->post_content);
+			try {
+				$imageUrl = $storage->put($tempDir.'/'.$match);
+				$post->post_content = str_replace($tempUrl.'/'.$match, $imageUrl, $post->post_content);
+			} catch (Exception $ex) {
+				@wp_delete_file($tempDir.'/'.$match);
+			}
 		}
-		
-		remove_action('wp_insert_post', 'hm_bbpui_insert_post');
-		
+
+		remove_action('wp_insert_post', 'hm_bbpui_insert_post', 10);
+
 		// Temporarily disable revisioning
 		if (($saveRevisionPriority = has_action('post_updated', 'wp_save_post_revision'))) {
 			remove_action('post_updated', 'wp_save_post_revision', $saveRevisionPriority);
@@ -307,15 +456,15 @@ function hm_bbpui_insert_post($postId) {
 			unset($wp_filter['edit_post']);
 		}
 		wp_update_post($post);
-		
+
 		// Restore edit_post actions
 		if (isset($edit_post_temp)) {
 			$wp_filter['edit_post'] = $edit_post_temp;
 		}
-		
+
 		add_action('post_updated', 'wp_save_post_revision', $saveRevisionPriority);
-		add_action('wp_insert_post', 'hm_bbpui_insert_post');
-		
+		add_action('wp_insert_post', 'hm_bbpui_insert_post', 10, 3);
+
 		hm_bbpui_force_clear_post_cache($postId);
 	}
 }
@@ -331,46 +480,56 @@ function hm_bbpui_force_clear_post_cache($postId)
 
 add_action('delete_post', 'hm_bbpui_delete_post');
 function hm_bbpui_delete_post($postId) {
-	$uploadDir = wp_upload_dir();
-	$postUploadDir = $uploadDir['basedir'].'/hm_bbpui/'.$postId;
-	
-	require_once(ABSPATH.'/wp-admin/includes/file.php');
-	WP_Filesystem();
-	global $wp_filesystem;
-	if ($wp_filesystem->is_dir($postUploadDir)) {
-		@$wp_filesystem->rmdir($postUploadDir, true);
+	$post = get_post($postId);
+	if (empty($post) || ($post->post_type != 'topic' && $post->post_type != 'reply'))
+		return;
+
+	try {
+		hm_bbpui_get_storage($postId, false)->deleteStorage();
+	} catch (Exception $ex) {
+		// No storage exists for this post (e.g. it never had any images uploaded) - nothing to do.
 	}
 }
 
 add_action('hm_bbpui_clean_temp_dir', 'hm_bbpui_clean_temp_dir');
 function hm_bbpui_clean_temp_dir() {
-	$uploadDir = wp_upload_dir();
+	$tempDir = hm_bbpui_get_temp_storage_dir();
 	$timeThreshold = time() - 86400;
-	
+
 	require_once(ABSPATH.'/wp-admin/includes/file.php');
 	WP_Filesystem();
-	
+
 	global $wp_filesystem;
-	foreach ($wp_filesystem->dirlist($uploadDir['basedir'].'/hm_bbpui_temp') as $dirItem) {
+	foreach ($wp_filesystem->dirlist($tempDir) as $dirItem) {
 		if ($dirItem['lastmodunix'] < $timeThreshold)
-			@$wp_filesystem->delete($uploadDir['basedir'].'/hm_bbpui_temp/'.$dirItem['name']);
+			@$wp_filesystem->delete($tempDir.'/'.$dirItem['name']);
 	}
 }
 
 function hm_bbpui_cleanup() {
-	// Delete directories for non-existent posts
-	$uploadDir = wp_upload_dir();
-	$storageDir = $uploadDir['basedir'].'/hm_bbpui';
-	
-	require_once(ABSPATH.'/wp-admin/includes/file.php');
-	WP_Filesystem();
-	global $wp_filesystem;
-	foreach ($wp_filesystem->dirlist($storageDir) as $dirItem) {
-		if (is_numeric($dirItem['name']) && $dirItem['type'] === 'd' && get_post_status($dirItem['name']) === false) {
-			hm_bbpui_delete_post($dirItem['name']);
+	$storageClass = hm_bbpui_get_storage_class();
+
+	// Delete storage for non-existent posts
+	try {
+		foreach ($storageClass::getStorageIds() as $storageId) {
+			if (get_post_status($storageId) === false) {
+				try {
+					hm_bbpui_get_storage($storageId, false)->deleteStorage();
+				} catch (Exception $ex) {
+				}
+			}
+		}
+	} catch (Exception $ex) {
+	}
+
+	// Delete images that were removed from existing posts
+	if (method_exists($storageClass, 'cleanAllImages')) {
+		try {
+			$storageClass::cleanAllImages(false);
+		} catch (Exception $ex) {
 		}
 	}
-	
+
 	// Clean temp directory
 	hm_bbpui_clean_temp_dir();
 }
