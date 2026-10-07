@@ -4,7 +4,7 @@ Tags: bbpress, image, images, inline, media
 Requires at least: 6.5.0
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -13,6 +13,20 @@ Upload inline images to BBPress forum topics and replies.
 == Description ==
 
 This plugin enables the TinyMCE WYSIWYG editor for BBPress forum topics and replies and adds a button to the editor's "Insert/edit image" dialog that allows forum users to upload images from their computer and insert them inline into their posts.
+
+= Image storage and compatibility =
+
+Uploaded images can be stored using a pluggable storage engine, selectable under Forum Images in the BerryPress menu:
+
+* **Filesystem** (default) - images are stored in your WordPress uploads directory. You can change the storage directory path and URL in the settings (use `{uploads}` as a placeholder for the uploads directory). Changing it only affects future uploads; existing images stay where they are.
+* **[Infinite Uploads](https://infiniteuploads.com?via=berrypress)** - when the Infinite Uploads plugin is active, forum images are automatically offloaded to cloud storage, served through its CDN and optimized. No extra setup is required, and the "Cleanup Unnecessary Files" tool also removes unused images from the cloud.
+* **Amazon S3™** - available with the optional [S3 Image Storage for bbPress](https://berrypress.com/product/bbpress/s3-image-storage-for-bbpress/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-repo-upgrade-link) add-on (paid).
+
+The plugin also works with BuddyPress.
+
+= Maintenance =
+
+The "Cleanup Unnecessary Files" button removes temporary uploads older than 24 hours, images that were removed from existing topics and replies, and image folders of deleted posts, on whichever storage engine is active.
 
 A [pro version](https://berrypress.com/product/bbpress/image-upload-for-bbpress-pro/?utm_source=image-upload-for-bbpress&utm_medium=link&utm_campaign=wp-repo-upgrade-link) with the following additional features is also available:
 
@@ -30,12 +44,18 @@ Amazon Web Services, the "Powered by Amazon Web Services" logo, AWS, Amazon Simp
 If you like this plugin, please consider leaving a comment or review.
 
 ## You may also like these plugins
-[BerryPress](https://berrypress.com/) has built a bunch of plugins. Check out other favorites here on the repository and don’t forget to leave a 5-star review to help others in the community decide.
+[BerryPress](https://berrypress.com/) has built a range of powerful plugins for WooCommerce and WordPress. Check out some of our favorites below - and don’t forget to leave a ⭐⭐⭐⭐⭐ review to help others in the community discover them!
 
-* [Product Sales Report for WooCommerce](https://wordpress.org/plugins/product-sales-report-for-woocommerce/) - setup a custom sales report for the products in your WooCommerce store with toggle sorting options. Including or excluding items based on date range, sale status, product category and id, define display order, choose what fields to include, and generate your report with a click.
-* [Export Order Items for WooCommerce](https://wordpress.org/plugins/export-order-items-for-woocommerce/) - export the order details for each sale in your WooCommerce store. Simplify order fulfillment, generate accounting reports in a few clicks, and download into CSV format for readability and universal compatibility with Export Order Items.
+* [Ninjalytics](https://berrypress.com/product/woocommerce/ninjalytics/) - Report, analyze, and visualize your store's data to gain actionable insights for growth, support operations, and satisfy customers!
+* [Live Carts for WooCommerce](https://wordpress.org/plugins/live-carts-for-woocommerce/) - Free plugin to view and analyze live shopping carts in real time to understand user behavior and optimize conversions ([Pro version](https://berrypress.com/product/woocommerce/live-carts/) also available). **Integrates with Ninjalytics** to add 4 specialized cart reporting templates.
+* [Export Order Items for WooCommerce](https://wordpress.org/plugins/export-order-items-for-woocommerce/) - Export detailed order data for every sale in your WooCommerce store. Simplify fulfillment, create accounting reports in just a few clicks, and download CSV files for easy sharing and compatibility.
+* [PhotoBerry Studio](https://wordpress.org/plugins/photoberry-studio/) - A complete solution to enhance and streamline your photography workflow, with tools for image organization, gallery management, and client proofing.
+* [Automatic Product Categories](https://berrypress.com/product/woocommerce/automatic-product-categories/) - Available as a free version and Pro. Automatically assign products to categories and tags, based on custom rules, saving you time and keeping your store organized.
+* [Advanced Order Editor for WooCommerce](https://wordpress.org/plugins/advanced-order-editor-for-woocommerce/) - Add editable Paid date, Completed date and Payment method fields in the WooCommerce order admin screen.
+* [LoginBerry](https://wordpress.org/plugins/loginberry/) - Bundles account verification, two-factor authentication (2FA), passwordless login, and login logs. Each feature can be enabled or disabled independently.
+* [Customer Address Change Notification for WooCommerce](https://wordpress.org/plugins/customer-address-change-notification-for-woocommerce/) - Get instant notifications when customers update their shipping or billing address, helping you stay on top of changes and prevent delivery issues.
 
-To view BerryPress's premium WordPress plugins, visit our [WordPress products catalog page](https://berrypress.com/shop/).
+To view BerryPress's premium WordPress plugins and themes, visit our [WordPress products catalog page](https://berrypress.com/shop/).
 
 == Installation ==
 
@@ -54,6 +74,10 @@ Alternatively, you can manually upload the plugin to your wp-content/plugins dir
 2. The Browse button in the Image dialog, which allows the user to select and upload an image from their computer for inline insertion into their forum topic or reply.
 
 == Changelog ==
+
+= 1.2.1 =
+- Fix: Cleanup Unnecessary Files could use the wrong storage engine, and now works correctly with Infinite Uploads
+- Readme: added storage engine and Infinite Uploads compatibility information
 
 = 1.2.0 =
 - Added a pluggable image storage engine, matching the Pro version's architecture

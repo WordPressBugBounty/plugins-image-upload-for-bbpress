@@ -264,7 +264,7 @@ class HM_BBPUI_Filesystem_Storage
         if ($dry) {
             $result = array();
             foreach (self::getStorageIds() as $storageId) {
-                $storage = new self($storageId, false);
+                $storage = new static($storageId, false);
                 foreach ($storage->cleanImages(true) as $image) {
                     $result[$image] = $storageId;
                 }
@@ -272,7 +272,7 @@ class HM_BBPUI_Filesystem_Storage
         } else {
 			$result = true;
             foreach (self::getStorageIds() as $storageId) {
-                $storage = new self($storageId, false);
+                $storage = new static($storageId, false);
                 $result = $storage->cleanImages(false, $imageUrls) && $result;
             }
         }
