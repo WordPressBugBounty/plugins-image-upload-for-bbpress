@@ -9,7 +9,7 @@ jQuery(document).ready(function($) {
 	$topBars.append(
 		$("<button>", {
 			type: "button",
-			class: "berrypress-top-bar-dismiss",
+			class: "berrypress-top-bar-dismiss berrypress-btn-reset",
 			"aria-label": "Dismiss this notice"
 		}).append($("<i>", {
 			class: "berrypress-icon-close",
@@ -18,7 +18,8 @@ jQuery(document).ready(function($) {
 	);
 
 	$topBars.on("click", ".berrypress-top-bar-dismiss", function() {
-		document.cookie = "berrypress_top_bar_dismissed=1; Max-Age=86400; Path=/; SameSite=Lax" +
+		const cookieName = "image_upload_for_bbpress_top_bar_dismissed" + ($(this).closest(".berrypress-top-bar").hasClass("berrypress-top-bar-promo") ? "_bf" : "");
+		document.cookie = cookieName + "=1; Max-Age=86400; Path=/; SameSite=Lax" +
 			(window.location.protocol === "https:" ? "; Secure" : "");
 		$(".berrypress-settings-container").addClass("berrypress-top-bar-dismissed");
 	});

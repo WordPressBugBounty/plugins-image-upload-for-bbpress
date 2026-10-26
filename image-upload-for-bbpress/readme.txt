@@ -4,7 +4,7 @@ Tags: bbpress, image, images, inline, media
 Requires at least: 6.5.0
 Tested up to: 7.1
 Requires PHP: 7.0
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -74,6 +74,9 @@ Alternatively, you can manually upload the plugin to your wp-content/plugins dir
 2. The Browse button in the Image dialog, which allows the user to select and upload an image from their computer for inline insertion into their forum topic or reply.
 
 == Changelog ==
+
+= 1.2.2 =
+- Admin styling fixes
 
 = 1.2.1 =
 - Fix: Cleanup Unnecessary Files could use the wrong storage engine, and now works correctly with Infinite Uploads
